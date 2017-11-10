@@ -1,0 +1,8 @@
+###################
+# compiled source #
+###################
+*.pyc
+*.class
+*.dll
+*.exe
+*.cache
