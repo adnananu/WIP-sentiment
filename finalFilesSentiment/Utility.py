@@ -432,7 +432,7 @@ class UtilityClass(object):
         }
         # spelling mistakes
 
-        self.spell_dict = enchant.Dict(dict_name)
+        #self.spell_dict = enchant.Dict(dict_name)
         self.max_dist = max_dist
 
         # repeating words

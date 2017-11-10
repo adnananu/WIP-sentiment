@@ -71,7 +71,7 @@ def processCleaning(  UtilObj,
     
     # Using BeautifulSoup library to remove HTML tags from raw text
     # for example (<br /><br />)!!
-    rawData = BeautifulSoup(rawData).text
+    rawData = BeautifulSoup(rawData, "lxml").text
     
     """ Ignoring expandAbbreviations() for the time being"""
     # This function expand the abbreviations in our text. for example

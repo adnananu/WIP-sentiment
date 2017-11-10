@@ -15,8 +15,10 @@ from keras.preprocessing.text import Tokenizer
 from sklearn.model_selection import train_test_split
 import collections
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 import nltk
 nltk.download('punkt')
+nltk.download('stopwords')
 from nltk.tokenize import word_tokenize
 import numpy as np
 import sys, Utility
@@ -31,7 +33,7 @@ import time
 #DATA_DIR = "/home/naanu/Music/dataForTest/imdb.txt"
 #DATA_DIR = "/home/naanu/Music/dataForTest/umich-sentiment-train.txt"
 
-DATA_DIR = "/home/naanu/Music/dataForTest/amazonPosNegData.log"
+DATA_DIR = "../dataForTest/amazonPosNegData.log"
 
 MAX_FEATURES = 0#12953 #15487 #114825 #2000
 MAX_SENTENCE_LENGTH = 0#558 #1259 #2818 #40
@@ -61,20 +63,21 @@ d = []
 def main(): #idiomatic way: allows me to write code in the order I like
     readData()
     
-    
+count = 0    
 def readData():
     
-    global maxlen, num_recs,MAX_FEATURES, MAX_SENTENCE_LENGTH
+    global maxlen, num_recs,MAX_FEATURES, MAX_SENTENCE_LENGTH, count
     print("\nPart one:Cleaning Data")
     x = Utility.UtilityClass()       
     try:
         with open(DATA_DIR, 'r') as textFile:
             for line in textFile:
-                #line = line+" "
+                line = line+" "
+                count = count + 1
                 label, sentence = line.strip().split("\t",1)
                 sentence = sentence.replace('\t'," ")
                 sentence = cleanData(x, \
-                                    sentence,True,True,True,True,True,True)
+                                    sentence,True,True,True,True,False, False)
                 #decode the UTF-8-encoded String into a unicode string.
                 words = word_tokenize(sentence)
                 if len(words) > maxlen:
@@ -98,6 +101,9 @@ def readData():
         print "I/O error(%s): %s" % (errno, strerror)
     except KeyError, e:
         print 'I got a KeyError - reason "%s"' % str(e)
+    except ValueError,eb:
+        print str(count)+"\n"
+        print ' here I am:  "%s"' % str(eb)
     except:
         print "Unexpected error:", sys.exc_info()[0]
         raise
@@ -133,10 +139,11 @@ def trainTokenizer():
     i = 0
     with open(DATA_DIR, 'r') as textFile:
         for line in textFile:
+            line = line+" "
             label, sentence = line.strip().split("\t",1)
             sentence = sentence.replace('\t'," ")
             sentence = cleanData(x, \
-                                    sentence,True,True,True,True,True,True)
+                                    sentence,True,True,True,True,False, False)
                 #decode the UTF-8-encoded String into a unicode string.
 #            words = word_tokenize(sentence)
             sentence = sentence.encode("utf-8")
@@ -161,10 +168,11 @@ def sentToSequence():
     i = 0
     with open(DATA_DIR, 'r') as textFile:
         for line in textFile:
+            line = line+" "
             label, sentence = line.strip().split("\t",1)
             sentence = sentence.replace('\t'," ")
             sentence = cleanData(x, \
-                                    sentence,True,True,True,True,True,True)
+                                    sentence,True,True,True,True,False, False)
                 #decode the UTF-8-encoded String into a unicode string.
 #            words = word_tokenize(sentence)
 #            seqs = []
@@ -264,6 +272,7 @@ def plotAndEvaluate():
     print("Starting Part # 5")
     global history, xxtest, yytest,X_val,y_val
     # plot loss and accuracy
+    f = plt.figure()
     plt.subplot(211)
     plt.title("Accuracy")
     plt.plot(history.history["acc"], color="g", label="Train")
@@ -277,7 +286,8 @@ def plotAndEvaluate():
     plt.legend(loc="best")
      
     plt.tight_layout()
-    plt.show()
+    #plt.show()
+    f.savefig("result_1.pdf", bbox_inches='tight')
     #evaluate
     score, acc = model.evaluate(xxtest, yytest, batch_size=BATCH_SIZE)
     print("Test score: %.3f, accuracy: %.3f" % (score, acc))
