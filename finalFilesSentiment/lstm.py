@@ -7,18 +7,22 @@ Created on Sun Jul 23 18:15:45 2017
 """
 
 from keras.layers.core import Activation, Dense, Dropout, SpatialDropout1D
+from keras.layers import Merge
 from keras.layers.embeddings import Embedding
 from keras.layers.recurrent import LSTM
 from keras.models import Sequential
+from keras.layers.advanced_activations import PReLU
+from keras.layers.normalization import BatchNormalization
 from keras.preprocessing import sequence
 from keras.preprocessing.text import Tokenizer
 from sklearn.model_selection import train_test_split
 import collections
 import matplotlib.pyplot as plt
+from keras.utils import plot_model
 plt.switch_backend('agg')
 import nltk
-nltk.download('punkt')
-nltk.download('stopwords')
+#nltk.download('punkt')
+#nltk.download('stopwords')
 from nltk.tokenize import word_tokenize
 import numpy as np
 import sys, Utility
@@ -33,7 +37,7 @@ import time
 #DATA_DIR = "/home/naanu/Music/dataForTest/imdb.txt"
 #DATA_DIR = "/home/naanu/Music/dataForTest/umich-sentiment-train.txt"
 
-DATA_DIR = "../dataForTest/amazonPosNegData.log"
+DATA_DIR = "../dataForTest/newcheck.log"
 
 MAX_FEATURES = 0#12953 #15487 #114825 #2000
 MAX_SENTENCE_LENGTH = 0#558 #1259 #2818 #40
@@ -50,7 +54,7 @@ maxlen = 0
 word_freqs = collections.Counter()
 num_recs = 0
 history = ""
-model = ""
+model1 = ""
 xxtest = ""
 yytest = ""
 y_val = ""
@@ -72,7 +76,7 @@ def readData():
     try:
         with open(DATA_DIR, 'r') as textFile:
             for line in textFile:
-                line = line+" "
+                line = line+". "
                 count = count + 1
                 label, sentence = line.strip().split("\t",1)
                 sentence = sentence.replace('\t'," ")
@@ -139,7 +143,7 @@ def trainTokenizer():
     i = 0
     with open(DATA_DIR, 'r') as textFile:
         for line in textFile:
-            line = line+" "
+            line = line+". "
             label, sentence = line.strip().split("\t",1)
             sentence = sentence.replace('\t'," ")
             sentence = cleanData(x, \
@@ -159,7 +163,7 @@ def trainTokenizer():
         
 def sentToSequence():
     print("\nStarting Part # 3")
-    global model, xxtest, yytest, history, toknizer, vocab_size, X,TestList
+    global model1, xxtest, yytest, history, toknizer, vocab_size, X,TestList
     x = Utility.UtilityClass()       
     
     X = np.empty((num_recs, ), dtype=list)
@@ -168,7 +172,7 @@ def sentToSequence():
     i = 0
     with open(DATA_DIR, 'r') as textFile:
         for line in textFile:
-            line = line+" "
+            line = line+". "
             label, sentence = line.strip().split("\t",1)
             sentence = sentence.replace('\t'," ")
             sentence = cleanData(x, \
@@ -226,7 +230,7 @@ def sentToSequence():
     print("\nStarting Part # 4 (Model building)")
     # Build model
 #    time.sleep(45)
-    
+    ''' Original One
     model = Sequential()
 #    model.add(Dropout(0.2)
     model.add(Embedding(vocab_size, EMBEDDING_SIZE, input_length=MAX_SENTENCE_LENGTH))
@@ -234,13 +238,28 @@ def sentToSequence():
     model.add(LSTM(HIDDEN_LAYER_SIZE, dropout=0.2, recurrent_dropout=0.2))
     model.add(Dense(1))
     model.add(Activation("sigmoid"))
-     
-    model.compile(loss="binary_crossentropy", optimizer="adam", 
-#sparse_categorical_crossentropy
-#    model.compile(loss="categorical_crossentropy", optimizer="adam", 
-                   metrics=["accuracy"])
-     
-    history = model.fit(Xtrain, ytrain, batch_size=BATCH_SIZE, epochs=NUM_EPOCHS, validation_data=(X_val, y_val))
+    '''
+    model1 = Sequential()
+    model1.add(Embedding(vocab_size, EMBEDDING_SIZE, input_length=MAX_SENTENCE_LENGTH))
+    model1.add(SpatialDropout1D(Dropout(0.2)))
+    model1.add(LSTM(HIDDEN_LAYER_SIZE, dropout=0.2, recurrent_dropout=0.2))
+    model1.add(BatchNormalization())
+    
+    model1.add(Dense(64))
+    model1.add(PReLU())
+    model1.add(Dropout(0.4))
+    model1.add(BatchNormalization())
+
+    model1.add(Dense(32))
+    model1.add(PReLU())
+    model1.add(Dropout(0.4))
+    model1.add(BatchNormalization())
+
+    model1.add(Dense(1))
+    model1.add(Activation("sigmoid"))
+
+    model1.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
+    history = model1.fit(Xtrain, ytrain, batch_size=BATCH_SIZE, epochs=NUM_EPOCHS, validation_data=(X_val, y_val))
 
 
 # Convolutional model (3x conv, flatten, 2x dense)
@@ -271,6 +290,7 @@ def sentToSequence():
 def plotAndEvaluate():
     print("Starting Part # 5")
     global history, xxtest, yytest,X_val,y_val
+    '''
     # plot loss and accuracy
     f = plt.figure()
     plt.subplot(211)
@@ -288,9 +308,35 @@ def plotAndEvaluate():
     plt.tight_layout()
     #plt.show()
     f.savefig("result_1.pdf", bbox_inches='tight')
+    '''
+    # summarize history for accuracy
+    f = plt.figure()
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    #plt.show()
+    f.savefig("acc_1.pdf", bbox_inches='tight')
+
+    # summarize history for loss
+    f1 = plt.figure()
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    #plt.show()
+    f1.savefig("loss_1.pdf", bbox_inches='tight')
+
     #evaluate
-    score, acc = model.evaluate(xxtest, yytest, batch_size=BATCH_SIZE)
+    score, acc = model1.evaluate(xxtest, yytest, batch_size=BATCH_SIZE)
     print("Test score: %.3f, accuracy: %.3f" % (score, acc))
+
+    #saving model shape
+    plot_model(model1, to_file='model.png', show_shapes=True)
     test()
 
 def test():
@@ -300,9 +346,9 @@ def test():
         idx = np.random.randint(len(xxtest))
         xtest = xxtest[idx].reshape(1,MAX_SENTENCE_LENGTH) #40 #1259
         ylabel = yytest[idx]
-        ypred = model.predict(xtest)[0][0]
+        ypred = model1.predict(xtest)[0][0]
         #sent = " ".join([index2word[x] for x in xtest[0].tolist() if x != 0])
-        print("%.0f\t%d\t%s" % (ypred, ylabel)) #, sent
+        print("%.0f\t%d" % (ypred, ylabel)) #, sent
 
 if __name__ == '__main__':
     main()
